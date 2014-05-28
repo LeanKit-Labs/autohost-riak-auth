@@ -29,7 +29,7 @@ module.exports = function( host, config, done ) {
 							}
 						} )
 						.then( function() {
-							done( usersExist );
+							done( hasUsers );
 						} );
 				} );
 		} );

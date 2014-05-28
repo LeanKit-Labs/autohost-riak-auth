@@ -1,6 +1,6 @@
 {
   "name": "autohost-riak-auth",
-  "version": "0.0.18",
+  "version": "0.0.19",
   "description": "Riak backed auth provider for autohost",
   "main": "src/index.js",
   "scripts": {},
