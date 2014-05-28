@@ -2,10 +2,10 @@ var Riak = require( 'riaktive' ),
 	when = require( 'when' ),
 	riak;
 
-module.exports = function( config, done ) {
+module.exports = function( host, config, done ) {
 	if( !riak ) {
 		riak = Riak( config );
-		var appName			= config.get( 'RIAK_AUTH_STORE', undefined ),
+		var appName			= host.appName || config.appName || undefined,
 			userBucket 		= config.get( 'RIAK_BUCKET_USER_AUTH', 'user_auth' ),
 			roleBucket 		= config.get( 'RIAK_BUCKET_ROLES', 'roles' ),
 			actionBucket 	= config.get( 'RIAK_BUCKET_ACTIONS', 'actions' ),
@@ -18,7 +18,20 @@ module.exports = function( config, done ) {
 				riak.createBucket( [ actionBucket, appName ], { alias: 'actions' } ),
 				riak.createBucket( [ pathBucket, appName ], { alias: 'paths' } )
 			];
-			when.all( promises ).done( done );
+			when
+				.all( promises )
+				.done( function() {
+					var hasUsers = false;
+					riak.user_auth.getKeysByIndex( '$key', '!', '~', 5 )
+						.progress( function( list ) {
+							if( list && list.keys && list.keys.length > 0 ) {
+								hasUsers = true;
+							}
+						} )
+						.then( function() {
+							done( usersExist );
+						} );
+				} );
 		} );
 	}
 	return riak;
