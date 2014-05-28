@@ -74,6 +74,7 @@ module.exports = function( riak ) {
 				} );
 			} );
 		},
+		hasUsers: hasUsers,
 		verify: function( username, password, done ) {
 			var hash = crypt( password, crypt.createSalt( 'blowfish' ) ),
 				match = false;
