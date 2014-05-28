@@ -1,6 +1,6 @@
 {
   "name": "autohost-riak-auth",
-  "version": "0.0.16",
+  "version": "0.0.17",
   "description": "Riak backed auth provider for autohost",
   "main": "src/index.js",
   "scripts": {},
@@ -8,7 +8,7 @@
     "autohost"
   ],
   "author": "Alex Robson",
-  "license": "MIT",
+  "license": "MIT License - http://opensource.org/licenses/MIT",
   "dependencies": {
     "configya": "~0.0.3",
     "crypt3": "~0.1.4",
