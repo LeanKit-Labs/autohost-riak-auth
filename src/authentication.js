@@ -16,6 +16,9 @@ module.exports = function( riak ) {
 						resolve( usersExist );
 					} );
 			} );
+		},
+		hasUsers = function() {
+			return usersExist ? when( usersExist ) : countPromise();
 		};
 	return {
 		create: function( username, password, done ) {
@@ -71,42 +74,47 @@ module.exports = function( riak ) {
 				} );
 			} );
 		},
-		hasUsers: function() {
-			return usersExist ? when( usersExist ) : countPromise();
-		},
 		verify: function( username, password, done ) {
 			var hash = crypt( password, crypt.createSalt( 'blowfish' ) ),
 				match = false;
 			return when.promise( function( resolve, reject ) {
-				riak.user_auth
-					.getKeysByIndex( 'password', hash )
-					.progress( function( list ) {
-						if( _.indexOf( list.keys, username ) >= 0 ) {
-							match = true;
-							riak.user_auth.get( username )
-								.then( null, function() {
-									resolve( null );
+				hasUsers()
+					.then( function( exist ) {
+						if( exist ) {
+							riak.user_auth
+								.getKeysByIndex( 'password', hash )
+								.progress( function( list ) {
+									if( _.indexOf( list.keys, username ) >= 0 ) {
+										match = true;
+										riak.user_auth.get( username )
+											.then( null, function() {
+												resolve( null );
+											} )
+											.then( function( user ) {
+												resolve( _.merge( { id: username, name: username }, user ) );
+											} );
+										if( done ) {
+											done( null, { id: username, name: username } );
+										}
+									}
 								} )
-								.then( function( user ) {
-									resolve( _.merge( { id: username, name: username }, user ) );
+								.then( null, function( err ) {
+									done( err, false );
+								} )
+								.done( function( keys ) {
+									if( !match ) {
+										resolve( false );
+										if( done ) {
+											done( null, false );
+										}
+									}
 								} );
-							if( done ) {
-								done( null, { id: username, name: username } );
-							}
-						}
-					} )
-					.then( null, function( err ) {
-						done( err, false );
-					} )
-					.done( function( keys ) {
-						if( !match ) {
-							resolve( false );
-							if( done ) {
-								done( null, false );
-							}
+						} else {
+							done( null, { id: 'anonymous', name: 'anonymous' } );
+							resolve( { id: 'anonymous', name: 'anonymous' } );
 						}
 					} );
-			} );
+			}.bind( this ) );
 		}
 	};
 };
