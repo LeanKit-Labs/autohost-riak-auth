@@ -98,7 +98,7 @@ module.exports = function( riak ) {
 			var list = [],
 				promises = [];
 			return when.promise( function( resolve ) {
-				riak.user_auth.getKeysByIndex( '$key', '!', '~', 25 )
+				riak.user_auth.getKeysByIndex( '$key', '!', '~', 512 )
 					.progress( function( resp ) {
 						var promise = riak.user_auth.getByKeys( resp.keys );
 						promises.push( promise );
@@ -129,7 +129,7 @@ module.exports = function( riak ) {
 			var list = {},
 				promises = [];
 			return when.promise( function( resolve ) {
-				riak.actions.getKeysByIndex( '$key', '!', '~', 25 )
+				riak.actions.getKeysByIndex( '$key', '!', '~', 512 )
 					.progress( function( resp ) {
 						var promise = riak.actions.getByKeys( resp.keys );
 						promises.push( promise );
@@ -164,7 +164,7 @@ module.exports = function( riak ) {
 		getRoleList: function( done ) {
 			var list = [];
 			return when.promise( function ( resolve ) {
-				riak.roles.getKeysByIndex( '$key', '!', '~', 25 )
+				riak.roles.getKeysByIndex( '$key', '!', '~', 512 )
 					.progress( function( resp ) {
 						list = list.concat( resp.keys );
 					} )
