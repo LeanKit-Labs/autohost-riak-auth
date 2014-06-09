@@ -1,16 +1,20 @@
-var crypt = require( 'crypt3' ),
+var bcrypt = require('bcrypt'),
 	when = require( 'when' ),
 	_ = require( 'lodash' );
+//require('when/monitor/console');
 
 module.exports = function( riak ) {
 	var usersExist = undefined,
 		countPromise = function() {
-			return when.promise( function( resolve ) {
+			return when.promise( function( resolve, reject ) {
 				riak.user_auth.getKeysByIndex( '$key', '!', '~', 5 )
 					.progress( function( list ) {
 						if( list && list.keys && list.keys.length > 0 ) {
 							usersExist = true;
 						}
+					} )
+					.then( null, function( err ) {
+						reject( err );
 					} )
 					.then( function() {
 						resolve( usersExist );
@@ -22,10 +26,12 @@ module.exports = function( riak ) {
 		};
 	return {
 		create: function( username, password, done ) {
-			var hash = crypt( password, crypt.createSalt( 'blowfish' ) );
+			//var hash = crypt( password, crypt.createSalt( 'blowfish' ) );
+			var salt = bcrypt.genSaltSync(10);
+			var hash = bcrypt.hashSync(password, salt);
 			return when.promise( function ( resolve, reject ) {
 				riak.user_auth
-					.put( { id: username, password: hash }, { password: hash } )
+					.put( { id: username, password: hash, salt: salt }, { username: username } )
 					.then( null, function( err ) {
 						reject( err );
 						if( done ) {
@@ -76,42 +82,58 @@ module.exports = function( riak ) {
 		},
 		hasUsers: hasUsers,
 		verify: function( username, password, done ) {
-			var hash = crypt( password, crypt.createSalt( 'blowfish' ) ),
-				match = false;
+			//var hash = crypt( password, crypt.createSalt( 'blowfish' ) );
+			//var hash = bcrypt.hashSync(password);
+			var match = false;
+			var promises = [], userList = [];
 			return when.promise( function( resolve, reject ) {
 				hasUsers()
+					.then( null, function( err ) {
+						reject( err );
+					} )
 					.then( function( exist ) {
 						if( exist ) {
 							riak.user_auth
-								.getKeysByIndex( 'password', hash )
+								.getKeysByIndex( 'username', username )
 								.progress( function( list ) {
-									if( _.indexOf( list.keys, username ) >= 0 ) {
-										match = true;
-										riak.user_auth.get( username )
-											.then( null, function() {
-												resolve( null );
-											} )
-											.then( function( user ) {
-												resolve( _.merge( { id: username, name: username }, user ) );
+									var promise = riak.user_auth.getByKeys( list.keys );
+									promises.push( promise );
+									promise
+										.then( function( docs ) {
+											_.each( docs, function( doc ) {
+												userList.push( _.omit( doc, 'vclock' ) );
 											} );
-										if( done ) {
-											done( null, { id: username, name: username } );
-										}
-									}
+										} );
 								} )
 								.then( null, function( err ) {
+									reject( err );
 									done( err, false );
 								} )
-								.done( function( keys ) {
-									if( !match ) {
-										resolve( false );
-										if( done ) {
-											done( null, false );
+								.done( function () {
+									when.all(promises).then(function() {
+										if (userList.length == 0) {
+											resolve(false);
+										} else {
+											var user = userList[0];
+											var hash = bcrypt.hashSync(password, user.salt);
+											if (hash == user.password) {
+												resolve( _.merge( { id: username, name: username }, user ) );
+												if( done ) {
+													done( null, { id: username, name: username } );
+												}
+											} else {
+												resolve( false );
+												if( done ) {
+													done( null, false );
+												}
+											}
 										}
-									}
-								} );
+									});
+								});
 						} else {
-							done( null, { id: 'anonymous', name: 'anonymous' } );
+							if( done ) {
+								done( null, { id: 'anonymous', name: 'anonymous' } );
+							}
 							resolve( { id: 'anonymous', name: 'anonymous' } );
 						}
 					} );

@@ -10,8 +10,8 @@
   "author": "Alex Robson",
   "license": "MIT License - http://opensource.org/licenses/MIT",
   "dependencies": {
+    "bcrypt": "~0.7.8",
     "configya": "~0.0.3",
-    "crypt3": "~0.1.4",
     "lodash": "~2.4.1",
     "passport": "~0.2.0",
     "passport-http": "~0.2.2",
