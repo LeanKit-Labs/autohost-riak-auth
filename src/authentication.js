@@ -5,12 +5,15 @@ var crypt = require( 'crypt3' ),
 module.exports = function( riak ) {
 	var usersExist = undefined,
 		countPromise = function() {
-			return when.promise( function( resolve ) {
+			return when.promise( function( resolve, reject ) {
 				riak.user_auth.getKeysByIndex( '$key', '!', '~', 5 )
 					.progress( function( list ) {
 						if( list && list.keys && list.keys.length > 0 ) {
 							usersExist = true;
 						}
+					} )
+					.then( null, function( err ) {
+						reject( err );
 					} )
 					.then( function() {
 						resolve( usersExist );
@@ -80,6 +83,9 @@ module.exports = function( riak ) {
 				match = false;
 			return when.promise( function( resolve, reject ) {
 				hasUsers()
+					.then( null, function( err ) {
+						reject( err );
+					} )
 					.then( function( exist ) {
 						if( exist ) {
 							riak.user_auth
@@ -100,9 +106,10 @@ module.exports = function( riak ) {
 									}
 								} )
 								.then( null, function( err ) {
+									reject( err );
 									done( err, false );
 								} )
-								.done( function( keys ) {
+								.then( function( keys ) {
 									if( !match ) {
 										resolve( false );
 										if( done ) {
@@ -111,7 +118,9 @@ module.exports = function( riak ) {
 									}
 								} );
 						} else {
-							done( null, { id: 'anonymous', name: 'anonymous' } );
+							if( done ) {
+								done( null, { id: 'anonymous', name: 'anonymous' } );
+							}
 							resolve( { id: 'anonymous', name: 'anonymous' } );
 						}
 					} );

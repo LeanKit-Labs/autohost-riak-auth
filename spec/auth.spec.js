@@ -1,10 +1,13 @@
 require( 'should' );
-var config = require( 'configya' )( './config.json' );
+require('when/monitor/console');
+var _ = require( 'lodash' ),
+	when = require( 'when' ),
+	config = require( 'configya' )( './config.json' );
 
 describe( 'with connection to riak', function() {
 	var riak, authorization, authentication;
 	before( function( done ) {
-		riak = require( '../src/riak.js' )( config, function() {
+		riak = require( '../src/riak.js' )( { appName: 'spec' }, config, function() {
 			authorization = require( '../src/authorization' )( riak ),
 			authentication = require( '../src/authentication' )( riak );
 			done();
@@ -12,6 +15,11 @@ describe( 'with connection to riak', function() {
 	} );
 
 	describe( 'when authenticating invalid credentials', function() {
+		before( function( done ) {
+			authentication.create( 'one', 'user' )
+				.done( function() { done(); } );
+		} );
+
 		it( 'should reject', function( done ) {
 			authentication.verify( 'terd', 'ferguson' )
 				.then( null, function( err ) {
@@ -20,6 +28,17 @@ describe( 'with connection to riak', function() {
 				} )
 				.then( function( valid ) {
 					valid.should.be.false;
+					done();
+				} );
+		} );
+
+		after( function( done ) {
+			this.timeout( 5000 );
+			riak.user_auth.del( 'one' )
+				.then( function() { 
+					// setTimeout( function() {
+					// 	done();
+					// }, 3000 );
 					done();
 				} );
 		} );
@@ -59,9 +78,10 @@ describe( 'with connection to riak', function() {
 			this.timeout( 5000 );
 			riak.user_auth.del( 'ron.burgundy@newsteam.com' )
 				.then( function() { 
-					setTimeout( function() {
-						done();
-					}, 3000 );
+					done();
+					// setTimeout( function() {
+					// 	done();
+					// }, 3000 );
 				} );
 		} );
 	} );
@@ -108,8 +128,14 @@ describe( 'with connection to riak', function() {
 		} );
 
 		it( 'should return user list', function( done ) {
-			this.timeout( 5000 );
+			this.timeout( 10000 );
 			authorization.getUserList()
+				.catch( function( err ) {
+					console.log( 'error', err );
+				} )
+				.then( null, function( err ) {
+					console.log( 'fail', err );
+				} )
 				.then( function( list ) {
 					done();
 				} );
@@ -210,13 +236,103 @@ describe( 'with connection to riak', function() {
 				} );
 		} );
 
-		after( function() {
+		after( function( done ) {
+			this.timeout( 6000 );
 			riak.user_auth.del( 'user@app.com' );
 			riak.user_auth.del( 'admin@app.com' );
 			riak.actions.del( 'add' );
 			riak.actions.del( 'update' );
 			riak.actions.del( 'view' );
 			riak.actions.del( 'delete' );
+			setTimeout( function() { done(); }, 3000 );
+		} );
+	} );
+
+	describe( 'with more than a page of items', function() {
+		var users = [
+				{ u: 'one', 	p: 'temp '},
+				{ u: 'two', 	p: 'temp' },
+				{ u: 'three', 	p: 'temp' },
+				{ u: 'four', 	p: 'temp' },
+				{ u: 'five', 	p: 'temp' },
+				{ u: 'six', 	p: 'temp' },
+				{ u: 'seven', 	p: 'temp' },
+				{ u: 'eight', 	p: 'temp' },
+				{ u: 'nine', 	p: 'temp' },
+				{ u: 'ten', 	p: 'temp' }
+		];
+		before( function( done ) {
+			var promises = _.map( users, function( user ) {
+				return authentication.create( user.u, user.p );
+			} );
+			when.all( promises )
+				.done( function() {
+					done();
+				} );
+		} );
+
+		describe( 'with first page retrieved', function() {
+			var page1, page2, page3, page4, continuation;
+			before( function( done ) {
+				authorization.getUserList( 3 )
+					.then( function( list ) {
+						page1 = list;
+						continuation = list.continuation;
+						done();
+					} );
+			} );
+
+			it( 'should get page 2', function( done ) {
+				authorization.getUserList( continuation )
+					.then( null, function( err ) {
+						console.log( 'err getting page 2', err );
+						done();
+					} )
+					.then( function( list ) {
+						page2 = list;
+						continuation = list.continuation;
+						done();
+					} )
+					.done();
+			} );
+
+			it( 'should get page 3', function( done ) {
+				authorization.getUserList( continuation )
+					.then( null, function( err ) {
+						console.log( 'err getting page 3', err );
+					} )
+					.then( function( list ) {
+						page3 = list;
+						continuation = list.continuation;
+						done();
+					} );
+			} );
+
+			it( 'should get page 4', function( done ) {
+				authorization.getUserList( continuation )
+					.then( null, function( err ) {
+						console.log( 'err getting page 4', err );
+					} )
+					.then( function( list ) {
+						page4 = list;
+						continuation = list.continuation;
+						done();
+					} );
+			} );
+
+			it( 'should have gotten correct page sizes', function() {
+				//console.log( page1.length, page2.length, page3.length, page4.length );
+				page1.length.should.equal( 3 );
+				page2.length.should.equal( 3 );
+				page3.length.should.equal( 3 );
+				page4.length.should.equal( 1 );
+			} );
+
+			after( function() {
+				_.each( users, function( user ) {
+					riak.user_auth.del( user.u );
+				} );
+			} );
 		} );
 	} );
 } );

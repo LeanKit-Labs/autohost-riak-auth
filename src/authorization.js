@@ -8,9 +8,10 @@ module.exports = function( riak ) {
 				return riak.actions.get( action.name )
 					.then( function( doc ) {
 						if( !doc ) {
-							promises.push( riak.actions.put( 
-								{ id: action.name, resource: action.resource, roles: [] }, 
-								{ 'resource': action.resource } ) 
+							promises.push( riak.actions.put(
+									{ id: action.name, resource: action.resource, roles: [] }, 
+									{ 'resource': action.resource } 
+								)
 							);
 						} else {
 							promises.push( when( true ) );
@@ -49,13 +50,13 @@ module.exports = function( riak ) {
 			}
 			return when.promise( function( resolve ) {
 				when.all( [ userPromise, actionPromise ] )
-				.done( function() {
-					var intersect = ( _.intersection( actionRoles, userRoles ).length > 0 );
-					resolve( intersect );
-					if( done ) {
-						done( null, intersect );
-					}
-				} );
+					.done( function() {
+						var intersect = ( _.intersection( actionRoles, userRoles ).length > 0 );
+						resolve( intersect );
+						if( done ) {
+							done( null, intersect );
+						}
+					} );
 			} );
 		},
 		getUserRoles: function( userName, done ) {
@@ -64,11 +65,11 @@ module.exports = function( riak ) {
 					.then( null, function( err ) {
 						resolve( [] );
 						if( done ) {
-							done( err, null );
+							done( err, [] );
 						}
 					} )
 					.then( function( user ) {
-						var roles = ( user == undefined || user.disabled ) ? [] : user.roles || [];
+						var roles = ( user == undefined || user.disabled ) ? [] : ( user.roles || [] );
 						resolve( roles );
 						if( done ) {
 							done( null, roles );
@@ -94,81 +95,148 @@ module.exports = function( riak ) {
 					} );
 			} );
 		},
-		getUserList: function( done ) {
+		getUserList: function() {
 			var list = [],
-				promises = [];
+				promises = [],
+				done, limit, continuation;
+
+			if( _.isNumber( arguments[ 0 ] ) ) {
+				limit = arguments[ 0 ];
+				done = arguments[ 1 ];
+			} else if ( _.isObject( arguments[ 0 ] ) ) {
+				continuation = arguments[ 0 ];
+				done = arguments[ 1 ];
+			} else {
+				done = arguments[ 0 ];
+			}
+			if( !continuation ) {
+				continuation = {
+					index: '$key',
+					limit: limit || 10,
+					start: '!',
+					finish: '~',
+					continuation: undefined
+				};
+			}
 			return when.promise( function( resolve ) {
-				riak.user_auth.getKeysByIndex( '$key', '!', '~', 25 )
+				riak.user_auth.getKeysByIndex( continuation )
 					.progress( function( resp ) {
 						var promise = riak.user_auth.getByKeys( resp.keys );
-						promises.push( promise );
 						promise
 							.then( function( docs ) {
 								_.each( docs, function( doc ) {
-									doc.roles = doc.roles || [];
-									doc.name = doc.id;
-									list.push( _.omit( doc, 'vclock' ) );
+									if( doc ) {
+										doc.roles = doc.roles || [];
+										doc.name = doc.id;
+										list.push( _.omit( doc, 'vclock' ) );
+									}
 								} );
 							} );
+						promises.push( promise );
 					} )
-					.done( function( continuation ) {
-						if( continuation ) {
-							list.continuation = continuation;
+					.then( function( newContinuation ) {
+						if( newContinuation ) {
+							list.continuation = newContinuation;
 						}
+					} )
+					.done( function() {
 						when.all( promises )
 							.then( function() {
-								resolve( list );
 								if( done ) {
 									done( undefined, list );
 								}
+								resolve( list );
 							} );
 					} );
 			} );
 		},
 		getActionList: function( done ) {
 			var list = {},
-				promises = [];
+				promises = [],
+				done, limit, continuation;
+			if( _.isNumber( arguments[ 0 ] ) ) {
+				limit = arguments[ 0 ];
+				done = arguments[ 1 ];
+			} else if ( _.isObject( arguments[ 0 ] ) ) {
+				continuation = arguments[ 0 ];
+				done = arguments[ 1 ];
+			} else {
+				done = arguments[ 0 ];
+			}
+			if( !continuation ) {
+				continuation = {
+					index: '$key',
+					limit: limit || 10,
+					start: '!',
+					finish: '~',
+					continuation: undefined
+				};
+			}
 			return when.promise( function( resolve ) {
-				riak.actions.getKeysByIndex( '$key', '!', '~', 25 )
+				riak.actions.getKeysByIndex( continuation )
 					.progress( function( resp ) {
 						var promise = riak.actions.getByKeys( resp.keys );
 						promises.push( promise );
 						promise
 							.then( function( docs ) {
 								_.each( docs, function( doc ) {
-									doc.roles = doc.roles || [];
-									doc.name = doc.id;
-									var resource = [];
-									if( !list[ doc.resource ] ) {
-										list[ doc.resource ] = resource;
-									} else {
-										resource = list[ doc.resource ];
+									if( doc ) {
+										doc.roles = doc.roles || [];
+										doc.name = doc.id;
+										var resource = [];
+										if( !list[ doc.resource ] ) {
+											list[ doc.resource ] = resource;
+										} else {
+											resource = list[ doc.resource ];
+										}
+										resource.push( _.omit( doc, 'vclock' ) );
 									}
-									resource.push( _.omit( doc, 'vclock' ) );
 								} );
 							} )
 					} )
-					.done( function( continuation ) {
+					.then( function( continuation ) {
 						if( continuation ) {
 							list.continuation = continuation;
 						}
-						if( done ) {
-							done( undefined, list );
-						}
+					} )
+					.done( function() {
 						when.all( promises ).then( function() {
+							if( done ) {
+								done( undefined, list );
+							}
 							resolve( list );
 						} );
 					} );
 			} );
 		},
 		getRoleList: function( done ) {
-			var list = [];
+			var list = [],
+				done, limit, continuation;
+
+			if( _.isNumber( arguments[ 0 ] ) ) {
+				limit = arguments[ 0 ];
+				done = arguments[ 1 ];
+			} else if ( _.isObject( arguments[ 0 ] ) ) {
+				continuation = arguments[ 0 ];
+				done = arguments[ 1 ];
+			} else {
+				done = arguments[ 0 ];
+			}
+			if( !continuation ) {
+				continuation = {
+					index: '$key',
+					limit: limit || 10,
+					start: '!',
+					finish: '~',
+					continuation: undefined
+				};
+			}
 			return when.promise( function ( resolve ) {
-				riak.roles.getKeysByIndex( '$key', '!', '~', 25 )
+				riak.roles.getKeysByIndex( continuation )
 					.progress( function( resp ) {
 						list = list.concat( resp.keys );
 					} )
-					.done( function( continuation ) {
+					.then( function( continuation ) {
 						if( continuation ) {
 							list.continuation = continuation;	
 						}						
@@ -281,10 +349,10 @@ module.exports = function( riak ) {
 		},
 		setUserRoles: function( user, roles, done ) {
 			return when.promise( function( resolve, reject ) {
-				riak.user_auth.put( {
-					id: user,
-					roles: roles || []
-				} )
+				riak.user_auth.mutate( user, function( doc ) {
+						doc.roles = ( roles || [] );
+						return doc;	
+					} )
 				.then( null, function( err ) {
 					if( done ) {
 						done( err );
