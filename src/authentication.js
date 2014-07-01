@@ -1,7 +1,6 @@
 var crypt = require( 'crypt3' ),
 	when = require( 'when' ),
 	_ = require( 'lodash' );
-require('when/monitor/console');
 
 module.exports = function( riak ) {
 	var usersExist = undefined,
