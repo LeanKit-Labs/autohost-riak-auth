@@ -1,16 +1,16 @@
-var crypt = require( 'bcrypt' ),
-	when = require( 'when' ),
-	passport = require( 'passport' ),
-	Basic = require( 'passport-http' ).BasicStrategy,
-	Bearer = require( 'passport-http-bearer' ).Strategy,
-	Token = require( './tokenStrategy' ),
-	_ = require( 'lodash' ),
-	actions,
-	roles,
-	users,
-	basicAuth,
-	bearerAuth,
-	tokenAuth;
+var crypt = require( 'bcrypt' );
+var when = require( 'when' );
+var Basic = require( 'passport-http' ).BasicStrategy;
+var Bearer = require( 'passport-http-bearer' ).Strategy;
+var Token = require( './tokenStrategy' );
+var _ = require( 'lodash' );
+var actions;
+var roles;
+var users;
+var basicAuth;
+var bearerAuth;
+var tokenAuth;
+var useSession;
 
 function authenticate( req, res, next ) {
 	var authorization = req.headers.authorization;
@@ -88,6 +88,11 @@ function createWrapper() {
 		getUsers: users.getList,
 		getUserRoles: users.getRoles,
 		hasUsers: users.hasUsers,
+		initPassport: function( passport ) {
+			basicAuth = passport.authenticate( 'basic', { session: useSession } );
+			bearerAuth = passport.authenticate( 'bearer', { session: useSession } );
+			tokenAuth = passport.authenticate( 'token', { session: useSession } );
+		},
 		serializeUser: serializeUser,
 		strategies: [
 			new Basic( authenticateCredentials ),
@@ -134,9 +139,6 @@ module.exports = function( config ) {
 	actions = require( './store/actions.js' )( config );
 	roles = require( './store/roles.js' )( config );
 	users = require( './store/users.js' )( config );
-	var useSession = !( config == undefined ? false : config.noSession ); // jshint ignore:line
-	basicAuth = passport.authenticate( 'basic', { session: useSession } );
-	bearerAuth = passport.authenticate( 'bearer', { session: useSession } );
-	tokenAuth = passport.authenticate( 'token', { session: useSession } );
+	useSession = !( config == undefined ? false : config.noSession ); // jshint ignore:line
 	return createWrapper();
 };
