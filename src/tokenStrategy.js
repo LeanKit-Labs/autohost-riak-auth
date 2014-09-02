@@ -1,5 +1,6 @@
-var util = require('util'),
-	Strategy = require('passport-strategy').Strategy;
+var util = require('util');
+var _ = require( 'lodash' );
+var Strategy = require('passport-strategy').Strategy;
 
 function TokenStrategy( verify ) {
 	Strategy.call( this );
