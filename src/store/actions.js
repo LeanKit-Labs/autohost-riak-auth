@@ -22,7 +22,8 @@ function getList( actions, continuation ) {
 		start: '!',
 		finish: '~',
 	}, list = [];
-	return actions.fetch( continuation || opts )
+	opts.max_results = continuation ? ( continuation.limit || continuation.max_results ) : undefined;
+	return actions.fetch( _.merge( opts, continuation ) )
 		.progress( function( doc ) {
 			list.push( doc );
 		} )

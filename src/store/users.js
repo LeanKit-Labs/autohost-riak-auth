@@ -96,9 +96,8 @@ function getList( users, continuation ) {
 		start: '!',
 		finish: '~'
 	}, list = [];
-	opts = _.merge( opts, continuation );
 	opts.max_results = continuation ? ( continuation.limit || continuation.max_results ) : undefined;
-	return users.fetch( opts )
+	return users.fetch( _.merge( opts, continuation ) )
 		.progress( function( doc ) {
 			list.push( _.omit( doc, 'tokens', 'hash', 'salt' ) );
 		} )

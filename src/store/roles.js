@@ -11,7 +11,8 @@ function getList( continuation ) {
 		start: '!',
 		finish: '~',
 	}, list = [];
-	return roles.fetch( continuation || opts )
+	opts.max_results = continuation ? ( continuation.limit || continuation.max_results ) : undefined;
+	return roles.fetch( _.merge( opts, continuation ) )
 		.progress( function( doc ) {
 			list.push( doc.name );
 		} )
