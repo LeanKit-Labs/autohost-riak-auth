@@ -67,7 +67,8 @@ describe( 'when working with actions', function() {
 				'two.c', 
 			];
 			expected.should.eql( _.map( actionList, 'name' ).sort() );
-		} );
+			actionList[ 0 ].roles.should.eql( [] );
+		} ); 
 
 	} );
 
@@ -91,6 +92,28 @@ describe( 'when working with actions', function() {
 		} );
 
 		it( 'should have the correct roles', function() {
+			roles.should.eql( [ 'r2', 'r4', 'r6' ] );
+		} );
+	} );
+
+	describe( 'when upserting action with roles', function() {
+		var roles;
+
+		before( function( done ) {
+			seq( [
+				function() { return actions.create( 'one.a' ); },
+				function() { return actions.getRoles( 'one.a' ); }
+				] )
+			.then( null, function( err ) {
+				console.log( err );
+			} )
+			.then( function( x ) {
+				roles = x[ 1 ];
+				done();
+			} );
+		} );
+
+		it( 'should not have replaced roles with an empty array', function() {
 			roles.should.eql( [ 'r2', 'r4', 'r6' ] );
 		} );
 	} );

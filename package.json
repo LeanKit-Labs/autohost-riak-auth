@@ -1,6 +1,6 @@
 {
   "name": "autohost-riak-auth",
-  "version": "0.1.0-4",
+  "version": "0.1.0-5",
   "description": "Riak backed auth provider for autohost",
   "main": "src/index.js",
   "scripts": {
@@ -20,7 +20,7 @@
     "passport-http": "^0.2.2",
     "passport-http-bearer": "^1.0.1",
     "passport-strategy": "^1.0.0",
-    "riaktive": "~0.1.0-2",
+    "riaktive": "~0.1.0-5",
     "when": "~3.1.0"
   },
   "devDependencies": {

@@ -42,11 +42,14 @@ function update( bucket, key, change ) {
 }
 
 function upsert( bucket, key, doc, index ) {
+	var skipEmpty = function( a, b ) {
+		return _.isEmpty( b ) ? a : b;
+	};
 	return when.promise( function( resolve, reject ) {
 		bucket.get( key )
 			.then( function( original ) {
 				if( original ) {
-					bucket.mutate( key, function( x ) { return _.assign( x, doc ); } )
+					bucket.mutate( key, function( x ) { return _.assign( x, doc, skipEmpty ); } )
 						.then( resolve, reject );
 				} else {
 					bucket.put( key, doc, index )
