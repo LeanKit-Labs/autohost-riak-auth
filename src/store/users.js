@@ -7,12 +7,11 @@ function addRoles( roles, user ) {
 }
 
 function changePassword( users, username, salt, hash ) {
-	return users.update( username,
-		function( user ) {
-			user.salt = salt;
-			user.hash = hash;
-			return user;
-		} );
+	return users.update( username, function( user ) {
+		user.salt = salt;
+		user.hash = hash;
+		return user;
+	} );
 }
 
 function changeRoles( users, username, roles, verb ) {
@@ -20,22 +19,21 @@ function changeRoles( users, username, roles, verb ) {
 }
 
 function createToken( users, username, token ) {
-	return users.update( username,
-		function( user ) {
-			if( !user.tokens ) {
-				user.tokens = [];
-			}
-			user.tokens.push( token );
-			if( !user._indexes ) {
-				user._indexes = { token: token };
-			}
-			if( !user._indexes.token ) {
-				user._indexes.token = token;
-			} else {
-				user._indexes.token = _.flatten( [ token, user._indexes.token ] );
-			}
-			return user;
-		} );
+	return users.update( username, function( user ) {
+		if ( !user.tokens ) {
+			user.tokens = [];
+		}
+		user.tokens.push( token );
+		if ( !user._indexes ) {
+			user._indexes = { token: token };
+		}
+		if ( !user._indexes.token ) {
+			user._indexes.token = token;
+		} else {
+			user._indexes.token = _.flatten( [ token, user._indexes.token ] );
+		}
+		return user;
+	} );
 }
 
 function create( users, username, salt, hash ) {
@@ -43,33 +41,30 @@ function create( users, username, salt, hash ) {
 }
 
 function destroyToken( users, username, token ) {
-	return users.update( username,
-		function( user ) {
-			var tokens = user._indexes.token;
-			if( _.isArray( tokens ) ) {
-				user._indexes.token = _.without( tokens, token );
-			} else if( tokens == token ) {
-				delete user._indexes.token;
-			}
-			user.tokens = _.isEmpty( user.tokens ) ? [] : _.without( user.tokens, token );
-			return user;
-		} );
+	return users.update( username, function( user ) {
+		var tokens = user._indexes.token;
+		if ( _.isArray( tokens ) ) {
+			user._indexes.token = _.without( tokens, token );
+		} else if ( tokens == token ) {
+			delete user._indexes.token;
+		}
+		user.tokens = _.isEmpty( user.tokens ) ? [] : _.without( user.tokens, token );
+		return user;
+	} );
 }
 
 function disable( users, username ) {
-	return users.update( username,
-		function( user ) {
-			user.disabled = true;
-			return user;
-		} );
+	return users.update( username, function( user ) {
+		user.disabled = true;
+		return user;
+	} );
 }
 
 function enable( users, username ) {
-	return users.update( username,
-		function( user ) {
-			user.disabled = false;
-			return user;
-		} );
+	return users.update( username, function( user ) {
+		user.disabled = false;
+		return user;
+	} );
 }
 
 function getByName( users, username ) {
@@ -78,12 +73,12 @@ function getByName( users, username ) {
 
 function getByToken( users, token ) {
 	var list = [];
-	return users.fetch( { 
-			index: 'token',
-			start: token
-		} )
+	return users.fetch( {
+		index: 'token',
+		start: token
+	} )
 		.progress( function( doc ) {
-			list.push( _.omit( doc, 'tokens', 'hash', 'salt' ) ); 
+			list.push( _.omit( doc, 'tokens', 'hash', 'salt' ) );
 		} )
 		.then( function() {
 			return list.length > 0 ? list[ 0 ] : undefined;
@@ -92,10 +87,11 @@ function getByToken( users, token ) {
 
 function getList( users, continuation ) {
 	var opts = {
-		index: '$key',
-		start: '!',
-		finish: '~'
-	}, list = [];
+			index: '$key',
+			start: '!',
+			finish: '~'
+		},
+		list = [];
 	opts.max_results = continuation ? ( continuation.limit || continuation.max_results ) : undefined;
 	return users.fetch( _.merge( opts, continuation ) )
 		.progress( function( doc ) {
@@ -107,16 +103,18 @@ function getList( users, continuation ) {
 		} );
 }
 
-function getRoles( users, username ) {
-	return users.get( username )
+function getRoles( users, user ) {
+	return users.get( user.name || user )
 		.then ( function( x ) {
-			return x.disabled ? [] : x.roles; 
+			return x.disabled ? [] : x.roles;
 		} );
 }
 
 function getTokens( users, username ) {
 	return users.get( username )
-		.then ( function( x ) { return x.tokens; } )
+		.then ( function( x ) {
+			return x.tokens;
+		} )
 		.then( function( list ) {
 			return list;
 		} );
@@ -151,6 +149,7 @@ module.exports = function( config ) {
 		getList: getList.bind( undefined, users ),
 		getRoles: getRoles.bind( undefined, users ),
 		getTokens: getTokens.bind( undefined, users ),
-		hasUsers: hasUsers.bind( undefined, users )
+		hasUsers: hasUsers.bind( undefined, users ),
+		removeAll: users.empty.bind( users )
 	};
 };

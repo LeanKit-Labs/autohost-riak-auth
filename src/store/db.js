@@ -7,24 +7,58 @@ var when = require( 'when' );
 var riaktive = require( 'riaktive' );
 var riak;
 
+function isEmpty( x ) {
+	return _.isEmpty( x );
+}
+
 function hasRecords( bucket ) {
 	var hasRecord;
-	return bucket.getKeysByIndex( '$key', '!', '~', 1 )
-			.progress( function( list ) {
-				if( list && list.length > 0 ) {
-					hasRecord = true;
-				}
-			} )
-			.then( function() {
-				return hasRecord;
-			} );
+	return bucket.getByIndex( '$key', '!', '~', 5 )
+		.progress( function( list ) {
+			if ( list && _.filter( list, isEmpty ).length > 0 ) {
+				hasRecord = true;
+			}
+		} )
+		.then( function() {
+			return hasRecord;
+		} );
+}
+
+function empty( bucket ) {
+	var keys = [];
+	var deferred = when.defer();
+	bucket.getKeysByIndex( '$key', '!', '~', 20 )
+		.progress( function( list ) {
+			if ( list && list.length > 0 ) {
+				keys = keys.concat( list );
+			}
+		} )
+		.then( function() {
+			if ( keys.length ) {
+				when.all( _.map( keys, function( key ) {
+					return bucket.del( key );
+				} ) )
+					.then( function() {
+						// seems silly, but this is to prevent us from getting tombstones
+						setTimeout( function() {
+							deferred.resolve();
+						}, 2000 );
+					}, deferred.reject );
+			} else {
+				deferred.resolve();
+			}
+		} )
+		.then( null, deferred.reject );
+	return deferred.promise;
 }
 
 function fetch( bucket, pattern, map, continuation ) {
-	map = map || function( x ) { 
-		return x; 
+	map = map || function( x ) {
+		return x;
 	};
-	var apply = function( list ) { return _.map( list, map ); };
+	var apply = function( list ) {
+		return _.map( list, map );
+	};
 	var op = bucket.getByIndex( pattern );
 	return op.progress( map );
 }
@@ -42,11 +76,16 @@ function update( bucket, key, change ) {
 }
 
 function upsert( bucket, key, doc, index ) {
+	var skipEmpty = function( a, b ) {
+		return _.isEmpty( b ) ? a : b;
+	};
 	return when.promise( function( resolve, reject ) {
 		bucket.get( key )
 			.then( function( original ) {
-				if( original ) {
-					bucket.mutate( key, function( x ) { return _.assign( x, doc ); } )
+				if ( original ) {
+					bucket.mutate( key, function( x ) {
+						return _.assign( x, doc, skipEmpty );
+					} )
 						.then( resolve, reject );
 				} else {
 					bucket.put( key, doc, index )
@@ -57,11 +96,12 @@ function upsert( bucket, key, doc, index ) {
 }
 
 module.exports = function( config, bucketName ) {
-	if( !riak ) {
+	if ( !riak ) {
 		riak = riaktive.connect( config.riak );
 	}
 	var bucket = riak.bucket( [ bucketName, config.appName ], { alias: bucketName } );
 	return {
+		empty: empty.bind( undefined, bucket ),
 		hasRecords: hasRecords.bind( undefined, bucket ),
 		fetch: fetch.bind( undefined, bucket ),
 		get: bucket.get.bind( bucket ),

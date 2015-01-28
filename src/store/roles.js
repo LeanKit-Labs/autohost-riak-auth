@@ -7,10 +7,11 @@ function create( rolename ) {
 
 function getList( continuation ) {
 	var opts = {
-		index: '$key',
-		start: '!',
-		finish: '~',
-	}, list = [];
+			index: '$key',
+			start: '!',
+			finish: '~',
+		},
+		list = [];
 	opts.max_results = continuation ? ( continuation.limit || continuation.max_results ) : undefined;
 	return roles.fetch( _.merge( opts, continuation ) )
 		.progress( function( doc ) {
@@ -30,6 +31,7 @@ module.exports = function( config ) {
 	return {
 		create: create,
 		'delete': purge,
-		getList: getList
+		getList: getList,
+		removeAll: roles.empty.bind( roles )
 	};
 };
