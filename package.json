@@ -1,6 +1,6 @@
 {
   "name": "autohost-riak-auth",
-  "version": "0.1.0-5",
+  "version": "0.2.0",
   "description": "Riak backed auth provider for autohost",
   "main": "src/index.js",
   "scripts": {
@@ -20,12 +20,16 @@
     "passport-http": "^0.2.2",
     "passport-http-bearer": "^1.0.1",
     "passport-strategy": "^1.0.0",
-    "riaktive": "~0.1.0-5",
+    "riaktive": "~0.1.0-7",
     "when": "~3.1.0"
   },
   "devDependencies": {
+    "autohost": "^0.3.0-19",
     "gulp": "^3.8.7",
-    "gulp-mocha": "~0.4.1",
+    "gulp-istanbul": "^0.5.0",
+    "gulp-mocha": "^2.0.0",
+    "open": "0.0.5",
+    "request": "^2.51.0",
     "should": "~3.3.0"
   }
 }

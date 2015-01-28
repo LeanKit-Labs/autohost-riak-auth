@@ -7,8 +7,8 @@ function addRoles( roles, action ) {
 }
 
 function changeRoles( actions, actionname, roles, verb ) {
-	return actions.update( actionname, verb === 'add' ? 
-		addRoles.bind( undefined, roles ) : 
+	return actions.update( actionname, verb === 'add' ?
+		addRoles.bind( undefined, roles ) :
 		removeRoles.bind( undefined, roles ) );
 }
 
@@ -18,10 +18,11 @@ function create( actions, actionname, resource ) {
 
 function getList( actions, continuation ) {
 	var opts = {
-		index: '$key',
-		start: '!',
-		finish: '~',
-	}, list = [];
+			index: '$key',
+			start: '!',
+			finish: '~',
+		},
+		list = [];
 	opts.max_results = continuation ? ( continuation.limit || continuation.max_results ) : undefined;
 	return actions.fetch( _.merge( opts, continuation ) )
 		.progress( function( doc ) {
@@ -55,6 +56,7 @@ module.exports = function( config ) {
 		create: create.bind( undefined, actions ),
 		'delete': purge.bind( undefined, actions ),
 		getList: getList.bind( undefined, actions ),
-		getRoles: getRoles.bind( undefined, actions )
+		getRoles: getRoles.bind( undefined, actions ),
+		removeAll: actions.empty.bind( actions )
 	};
 };
